@@ -1,0 +1,236 @@
+@import "tailwindcss";
+
+/*
+ * Dark mode is class-based: `<html class="dark">` is set before first paint by
+ * the inline script in app/layout.tsx and kept in sync by `useTheme()`.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Semantic design tokens. Use these (bg-background, bg-card, text-foreground,
+ * text-muted-foreground, border-border, bg-primary, ...) in new pages and they
+ * adapt to light/dark mode automatically — no `dark:` variants required.
+ */
+:root {
+  --background: #f6f7fb;
+  --foreground: #0f1222;
+  --card: #ffffff;
+  --muted: #f1f2f8;
+  --muted-foreground: #5f6780;
+  --subtle-foreground: #969cb2;
+  --border: #e4e6ef;
+  --input: #dcdfea;
+  --primary: #5b4cf0;
+  --primary-hover: #4a3be0;
+  --primary-foreground: #ffffff;
+  --primary-soft: #efedff;
+  --primary-soft-foreground: #4a3be0;
+  --ring: #7c6ff5;
+  --success: #059669;
+  --success-soft: #e6f7ef;
+  --danger: #e11d48;
+  --danger-soft: #feedf0;
+  --chart-success: #5b4cf0;
+  --chart-failed: #f43f5e;
+}
+
+.dark {
+  --background: #090a13;
+  --foreground: #eceefa;
+  --card: #10121e;
+  --muted: #181a2a;
+  --muted-foreground: #9a9fb8;
+  --subtle-foreground: #646a86;
+  --border: #232639;
+  --input: #2c3047;
+  --primary: #6c5cf5;
+  --primary-hover: #7d6ff8;
+  --primary-foreground: #ffffff;
+  --primary-soft: #1d1a42;
+  --primary-soft-foreground: #b4acff;
+  --ring: #8b7dff;
+  --success: #34d399;
+  --success-soft: #0f2a22;
+  --danger: #fb7185;
+  --danger-soft: #2f1219;
+  --chart-success: #8b7dff;
+  --chart-failed: #f43f5e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-chart-success: var(--chart-success);
+  --color-chart-failed: var(--chart-failed);
+}
+
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-float-z: float-z 6s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-dash: dash 1.4s linear infinite;
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-marquee-reverse: marquee 40s linear infinite reverse;
+  --animate-pulse-ring: pulse-ring 2.2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  --animate-grow-y: grow-y 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-grow-x: grow-x 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  @keyframes float-z {
+    0%,
+    100% {
+      transform: translateZ(0);
+    }
+    50% {
+      transform: translateZ(22px);
+    }
+  }
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes dash {
+    to {
+      stroke-dashoffset: -32;
+    }
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    100% {
+      transform: scale(1.9);
+      opacity: 0;
+    }
+  }
+  @keyframes grow-y {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+  @keyframes wave {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    20%,
+    60% {
+      transform: rotate(16deg);
+    }
+    40%,
+    80% {
+      transform: rotate(-8deg);
+    }
+  }
+  @keyframes grow-x {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-primary) 25%, transparent);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Circular reveal used by the theme toggle (see components/theme/use-theme.ts). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
