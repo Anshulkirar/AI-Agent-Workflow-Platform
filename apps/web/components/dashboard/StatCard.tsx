@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { Stat } from "@/lib/mock-data";
 
-export function StatCard({ stat, index = 0 }: { stat: Stat; index?: number }) {
+/** KPI tile; `chart` adds an optional sparkline under the trend line. */
+export function StatCard({ stat, index = 0, chart }: { stat: Stat; index?: number; chart?: ReactNode }) {
   const Icon = stat.icon;
   const TrendIcon = stat.direction === "up" ? ArrowUpRight : ArrowDownRight;
 
@@ -36,6 +38,8 @@ export function StatCard({ stat, index = 0 }: { stat: Stat; index?: number }) {
         <TrendIcon size={14} aria-hidden />
         {stat.change}
       </p>
+
+      {chart && <div className="mt-3">{chart}</div>}
     </article>
   );
 }

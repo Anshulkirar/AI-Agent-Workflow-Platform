@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { currentUser, stats } from "@/lib/mock-data";
+import { ProfileFirstName } from "@/components/settings/ProfileName";
+import { stats } from "@/lib/mock-data";
 import { RecentRuns } from "./RecentRuns";
 import { RunActivityChart } from "./RunActivityChart";
 import { StatCard } from "./StatCard";
@@ -13,7 +14,7 @@ export default function DashboardOverview() {
       <section className="flex flex-col justify-between gap-4 animate-fade-up sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">
-            Welcome back, {currentUser.name}!{" "}
+            Welcome back, <ProfileFirstName />!{" "}
             <span className="inline-block origin-[70%_70%] hover:animate-[wave_1s_ease-in-out]">
               👋
             </span>

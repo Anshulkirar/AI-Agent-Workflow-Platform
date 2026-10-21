@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Toaster } from "@/components/ui/Toaster";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
@@ -21,6 +22,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
+
+      <Toaster />
     </div>
   );
 }

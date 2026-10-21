@@ -5,41 +5,8 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { planPrice, plans } from "@/lib/settings/plans";
 import { SectionHeader } from "./SectionHeader";
-
-type Plan = {
-  name: string;
-  description: string;
-  monthly: number | null;
-  features: string[];
-  cta: string;
-  featured?: boolean;
-};
-
-const plans: Plan[] = [
-  {
-    name: "Free",
-    description: "For individuals exploring AI agents.",
-    monthly: 0,
-    features: ["3 agents", "500 runs / month", "Community integrations", "7-day run history"],
-    cta: "Start for free",
-  },
-  {
-    name: "Pro",
-    description: "For teams shipping agents to production.",
-    monthly: 29,
-    features: ["Unlimited agents", "25,000 runs / month", "All 100+ integrations", "Workflows & scheduling", "90-day run history"],
-    cta: "Start 14-day trial",
-    featured: true,
-  },
-  {
-    name: "Enterprise",
-    description: "For organizations with advanced needs.",
-    monthly: null,
-    features: ["Unlimited runs", "SSO & audit logs", "Dedicated infrastructure", "Priority support & SLA"],
-    cta: "Contact sales",
-  },
-];
 
 export function Pricing() {
   const [yearly, setYearly] = useState(true);
@@ -85,10 +52,8 @@ export function Pricing() {
 
         <div className="mt-12 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
           {plans.map((plan) => {
-            const price =
-              plan.monthly === null
-                ? "Custom"
-                : `$${yearly ? Math.round(plan.monthly * 0.8) : plan.monthly}`;
+            const amount = planPrice(plan, yearly);
+            const price = amount === null ? "Custom" : `$${amount}`;
 
             return (
               <article

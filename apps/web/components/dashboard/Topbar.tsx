@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   ChevronDown,
+  CreditCard,
   LogOut,
   Menu,
   Search,
@@ -14,7 +15,9 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { cn } from "@/lib/cn";
-import { currentUser } from "@/lib/mock-data";
+import { UserAvatar } from "@/components/settings/SettingsKit";
+import { plansById } from "@/lib/settings/plans";
+import { useBilling, useProfile } from "@/lib/settings/store";
 
 const pageNames: Record<string, string> = {
   dashboard: "Dashboard",
@@ -38,6 +41,9 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const profile = useProfile();
+  const billing = useBilling();
+  const planLabel = `${plansById[billing.planId].name} ${billing.status === "trialing" ? "trial" : "plan"}`;
   const menuRef = useRef<HTMLDivElement>(null);
 
   const segments = pathname.split("/").filter(Boolean);
@@ -127,15 +133,13 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
             aria-expanded={menuOpen}
             className="flex items-center gap-2.5 rounded-xl p-1 text-left transition hover:bg-muted sm:pr-2"
           >
-            <span className="flex size-9 items-center justify-center rounded-full bg-linear-to-br from-[#8b7dff] to-[#4338ca] text-xs font-bold text-white ring-2 ring-card">
-              {currentUser.initials}
-            </span>
+            <UserAvatar name={profile.name} email={profile.email} color={profile.avatarColor} />
             <span className="hidden sm:block">
-              <span className="block text-sm font-semibold leading-tight">
-                {currentUser.name}
+              <span className="block max-w-32 truncate text-sm font-semibold leading-tight">
+                {profile.name}
               </span>
               <span className="block text-[11px] text-muted-foreground">
-                {currentUser.plan}
+                {planLabel}
               </span>
             </span>
             <ChevronDown
@@ -153,16 +157,17 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
               className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-border bg-card p-1.5 shadow-xl shadow-black/10 animate-fade-in"
             >
               <div className="border-b border-border px-3 pb-2.5 pt-1.5">
-                <p className="text-sm font-semibold">{currentUser.fullName}</p>
-                <p className="text-xs text-muted-foreground">{currentUser.plan}</p>
+                <p className="truncate text-sm font-semibold">{profile.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{profile.email}</p>
               </div>
               <div className="flex items-center justify-between px-3 py-2.5 sm:hidden">
                 <span className="text-sm text-muted-foreground">Dark mode</span>
                 <ThemeToggle />
               </div>
               {[
-                { label: "Profile", href: "/settings", icon: UserRound },
-                { label: "Settings", href: "/settings", icon: Settings2 },
+                { label: "Profile", href: "/settings/profile", icon: UserRound },
+                { label: "Settings", href: "/settings/workspace", icon: Settings2 },
+                { label: "Billing & usage", href: "/settings/billing", icon: CreditCard },
               ].map((item) => (
                 <Link
                   key={item.label}

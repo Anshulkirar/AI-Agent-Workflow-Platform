@@ -20,6 +20,8 @@ import {
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
+import { useBilling } from "@/lib/settings/store";
+import { meterPercent, useUsage } from "@/lib/settings/usage";
 
 const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -156,23 +158,47 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
 
           <ThemeSwitcher />
 
-          <div className="rounded-xl border border-border bg-muted/60 p-3.5">
-            <div className="mb-2.5 flex items-center gap-2">
-              <Sparkles size={16} className="text-primary" />
-              <span className="text-xs font-semibold">Free workspace</span>
-              <span className="ml-auto text-[10px] font-medium text-muted-foreground">
-                35%
-              </span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-border">
-              <div className="h-full w-[35%] origin-left rounded-full bg-primary animate-grow-x" />
-            </div>
-            <p className="mt-2.5 text-[11px] leading-4 text-muted-foreground">
-              437 of 1,250 monthly runs used.
-            </p>
-          </div>
+          <PlanUsage onNavigate={onClose} />
         </div>
       </aside>
     </>
+  );
+}
+
+/** Plan + monthly run usage, from Settings → Billing & usage. */
+function PlanUsage({ onNavigate }: { onNavigate?: () => void }) {
+  const billing = useBilling();
+  const usage = useUsage();
+  const percent = meterPercent(usage.runs);
+  const limit = usage.runs.limit;
+
+  return (
+    <Link
+      href="/settings/billing"
+      onClick={onNavigate}
+      className="block rounded-xl border border-border bg-muted/60 p-3.5 transition-colors hover:border-primary/40"
+    >
+      <div className="mb-2.5 flex items-center gap-2">
+        <Sparkles size={16} className="text-primary" />
+        <span className="text-xs font-semibold">
+          {usage.plan.name} {billing.status === "trialing" ? "trial" : "workspace"}
+        </span>
+        {limit !== null && (
+          <span className="ml-auto text-[10px] font-medium text-muted-foreground">{Math.round(percent)}%</span>
+        )}
+      </div>
+      {limit !== null && (
+        <div className="h-1.5 overflow-hidden rounded-full bg-border">
+          <div
+            className={cn("h-full origin-left rounded-full animate-grow-x", percent >= 100 ? "bg-danger" : percent >= 80 ? "bg-amber-500" : "bg-primary")}
+            style={{ width: `${Math.max(percent, 2)}%` }}
+          />
+        </div>
+      )}
+      <p className="mt-2.5 text-[11px] leading-4 text-muted-foreground">
+        {usage.runs.used.toLocaleString("en-US")}
+        {limit === null ? " runs this month." : ` of ${limit.toLocaleString("en-US")} monthly runs used.`}
+      </p>
+    </Link>
   );
 }

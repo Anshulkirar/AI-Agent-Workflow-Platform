@@ -32,6 +32,13 @@
   --danger-soft: #feedf0;
   --chart-success: #5b4cf0;
   --chart-failed: #f43f5e;
+  --chart-completion: #0891b2;
+  /* Categorical series (fixed order, validated for color-vision deficiency). */
+  --chart-1: #5b4cf0;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
 }
 
 .dark {
@@ -55,6 +62,12 @@
   --danger-soft: #2f1219;
   --chart-success: #8b7dff;
   --chart-failed: #f43f5e;
+  --chart-completion: #0e9fb8;
+  --chart-1: #8b7dff;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
 }
 
 @theme inline {
@@ -78,6 +91,12 @@
   --color-danger-soft: var(--danger-soft);
   --color-chart-success: var(--chart-success);
   --color-chart-failed: var(--chart-failed);
+  --color-chart-completion: var(--chart-completion);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 }
 
 @theme {
@@ -215,6 +234,74 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+}
+
+/* React Flow (agent builder) mapped onto the design tokens, so it themes itself. */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-background-pattern-color: var(--input);
+  --xy-edge-stroke: var(--subtle-foreground);
+  --xy-edge-stroke-width: 1.75;
+  --xy-edge-stroke-selected: var(--primary);
+  --xy-connectionline-stroke: var(--primary);
+  --xy-connectionline-stroke-width: 2;
+  --xy-handle-background-color: var(--card);
+  --xy-handle-border-color: var(--primary);
+  --xy-edge-label-background-color: var(--card);
+  --xy-edge-label-color: var(--muted-foreground);
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-mask-background-color: color-mix(in oklab, var(--muted) 75%, transparent);
+  --xy-minimap-node-background-color: var(--input);
+  --xy-minimap-node-stroke-color: transparent;
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--muted);
+  --xy-controls-button-color: var(--muted-foreground);
+  --xy-controls-button-color-hover: var(--foreground);
+  --xy-controls-button-border-color: var(--border);
+  --xy-selection-background-color: color-mix(in oklab, var(--primary) 8%, transparent);
+  --xy-selection-border: 1px dashed var(--primary);
+  --xy-attribution-background-color: transparent;
+}
+
+.react-flow .react-flow__handle {
+  width: 11px;
+  height: 11px;
+  border-width: 2px;
+  transition: transform 150ms ease;
+}
+
+.react-flow .react-flow__handle:hover {
+  transform: translate(-50%, var(--af-handle-y, -50%)) scale(1.35);
+}
+
+.react-flow .react-flow__handle-bottom {
+  --af-handle-y: 50%;
+}
+
+.react-flow .react-flow__controls,
+.react-flow .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px -8px rgb(0 0 0 / 0.15);
+}
+
+.react-flow .react-flow__edge-textbg {
+  rx: 6px;
+}
+
+.react-flow .react-flow__edge.af-edge-running .react-flow__edge-path {
+  stroke: var(--primary);
+  stroke-width: 2.5;
+}
+
+.react-flow .react-flow__edge.af-edge-done .react-flow__edge-path {
+  stroke: var(--success);
+  stroke-width: 2.25;
+}
+
+.react-flow .react-flow__attribution a {
+  color: var(--subtle-foreground);
 }
 
 /* Circular reveal used by the theme toggle (see components/theme/use-theme.ts). */
