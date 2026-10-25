@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { GitHubIcon, GoogleIcon } from "@/components/icons/BrandIcons";
 import { buttonVariants } from "@/components/ui/button";
+import { AuthRequestError, authClient, safeRedirectPath } from "@/lib/auth/client";
 import { cn } from "@/lib/cn";
 import { FormField } from "./FormField";
 
@@ -120,9 +121,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
   const [submitted, setSubmitted] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
-  const [provider, setProvider] = useState<"google" | "github" | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Errors the server reported for specific fields (e.g. email already registered).
+  const [serverErrors, setServerErrors] = useState<Errors>({});
   const timers = useRef<number[]>([]);
 
   useEffect(() => {
@@ -132,23 +134,55 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
   const errors = validate(values, mode);
   const visibleError = (field: Field) =>
-    touched[field] || submitted ? errors[field] : undefined;
-  const busy = status !== "idle" || provider !== null;
+    (touched[field] || submitted ? errors[field] : undefined) ?? serverErrors[field];
+  const busy = status !== "idle";
 
-  const update = <K extends Field>(field: K, value: Values[K]) =>
+  const update = <K extends Field>(field: K, value: Values[K]) => {
     setValues((current) => ({ ...current, [field]: value }));
+    setServerErrors((current) => ({ ...current, [field]: undefined }));
+  };
   const touch = (field: Field) =>
     setTouched((current) => ({ ...current, [field]: true }));
 
   const finish = () => {
     setStatus("success");
-    timers.current.push(window.setTimeout(() => router.push("/dashboard"), 700));
+    const next = safeRedirectPath(new URLSearchParams(window.location.search).get("next"));
+    timers.current.push(
+      window.setTimeout(() => {
+        router.replace(next);
+        // Re-render server components so they see the new session cookie.
+        router.refresh();
+      }, 700),
+    );
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const showServerError = (error: unknown) => {
+    if (!(error instanceof AuthRequestError)) {
+      setNotice("Something went wrong. Please try again.");
+      return;
+    }
+    const fieldErrors: Errors = {};
+    for (const detail of error.details) {
+      if (detail.field in values) fieldErrors[detail.field as Field] ??= detail.message;
+    }
+    setServerErrors(fieldErrors);
+
+    const firstField = FIELD_ORDER.find((field) => fieldErrors[field]);
+    if (firstField) {
+      document.getElementById(`${mode}-${firstField}`)?.focus();
+    } else if (error.code === "RATE_LIMITED" && error.retryAfterSeconds) {
+      const minutes = Math.ceil(error.retryAfterSeconds / 60);
+      setNotice(`Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
+    } else {
+      setNotice(error.message);
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitted(true);
     setNotice(null);
+    setServerErrors({});
 
     const firstInvalid = FIELD_ORDER.find((field) => errors[field]);
     if (firstInvalid) {
@@ -156,14 +190,22 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return;
     }
 
-    // Frontend-only: simulate a network round-trip, then enter the dashboard.
     setStatus("loading");
-    timers.current.push(window.setTimeout(finish, 1100));
+    try {
+      if (mode === "signup") {
+        await authClient.register({ name: values.name, email: values.email, password: values.password });
+      } else {
+        await authClient.login({ email: values.email, password: values.password, remember: values.remember });
+      }
+      finish();
+    } catch (error) {
+      setStatus("idle");
+      showServerError(error);
+    }
   };
 
   const handleProvider = (name: "google" | "github") => {
-    setProvider(name);
-    timers.current.push(window.setTimeout(finish, 1000));
+    setNotice(`Signing in with ${name === "google" ? "Google" : "GitHub"} isn't available yet — use your email and password.`);
   };
 
   const strength = passwordStrength(values.password);
@@ -234,7 +276,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 <button
                   type="button"
                   onClick={() =>
-                    setNotice("Password reset isn't available in this demo — any valid password works.")
+                    setNotice("Password reset isn't available yet.")
                   }
                   className="text-xs font-semibold text-primary hover:underline"
                 >
@@ -374,7 +416,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             onClick={() => handleProvider(item.id)}
             className={buttonVariants({ variant: "secondary", size: "md", className: "h-11" })}
           >
-            {provider === item.id ? <LoaderCircle className="size-4 animate-spin" /> : item.icon}
+            {item.icon}
             Continue with {item.label}
           </button>
         ))}

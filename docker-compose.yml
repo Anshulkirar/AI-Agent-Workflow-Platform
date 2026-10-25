@@ -15,8 +15,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-agentflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-agentflow}
+      # Read by docker/postgres/init/10-auth.sql on first start.
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
@@ -41,6 +44,40 @@ services:
       timeout: 5s
       retries: 10
 
+  # One-shot: applies the auth schema, then exits. `auth` starts only if this succeeded.
+  auth-migrate:
+    build: &auth-build
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: auth
+    command: ["node", "dist/migrate.js", "up"]
+    restart: "no"
+    environment:
+      AUTH_DATABASE_URL: &auth-db-url postgres://auth_service:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD is required}@postgres:5432/agentflow_auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Sole owner of users and sessions. No published port: only the gateway can reach it.
+  auth:
+    build: *auth-build
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4001
+      AUTH_DATABASE_URL: *auth-db-url
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+    depends_on:
+      auth-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -51,12 +88,16 @@ services:
     environment:
       <<: *app-env
       PORT: 4000
+      AUTH_SERVICE_URL: http://auth:4001
+      WEB_ORIGINS: http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000}
     ports:
       - "${API_PORT:-4000}:4000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      auth:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

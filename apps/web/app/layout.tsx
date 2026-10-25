@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { sidebarInitScript } from "@/components/dashboard/sidebar-script";
 import { themeInitScript } from "@/components/theme/theme-script";
 import "./globals.css";
 
@@ -21,10 +22,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    // The theme script mutates <html> before hydration, hence the suppression.
+    // The theme and sidebar scripts mutate <html> before hydration, hence the suppression.
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript + sidebarInitScript }} />
       </head>
       <body className="min-h-screen">{children}</body>
     </html>

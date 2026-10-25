@@ -19,6 +19,8 @@ COPY --from=pruner /repo/out/json/ .
 COPY --from=pruner /repo/out/package-lock.json ./package-lock.json
 RUN npm ci
 COPY --from=pruner /repo/out/full/ .
+# `turbo prune` only copies workspaces; every package's tsconfig extends this root file.
+COPY tsconfig.base.json ./
 RUN npx turbo run build --filter=@agentflow/${APP} && npm prune --omit=dev
 
 # 3. Minimal runtime

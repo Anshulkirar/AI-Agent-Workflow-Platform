@@ -7,6 +7,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
+ * Desktop sidebar collapsed to icons: `<html data-sidebar="collapsed">`, set
+ * before first paint (components/dashboard/sidebar-script.ts). Below `lg` the
+ * sidebar is a full-width drawer, so the variant never applies there.
+ */
+@custom-variant collapsed {
+  @media (width >= 64rem) {
+    &:where([data-sidebar="collapsed"] *) {
+      @slot;
+    }
+  }
+}
+
+/*
  * Semantic design tokens. Use these (bg-background, bg-card, text-foreground,
  * text-muted-foreground, border-border, bg-primary, ...) in new pages and they
  * adapt to light/dark mode automatically — no `dark:` variants required.

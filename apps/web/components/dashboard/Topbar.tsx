@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
@@ -14,8 +14,11 @@ import {
   UserRound,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
 import { UserAvatar } from "@/components/settings/SettingsKit";
+import { authClient } from "@/lib/auth/client";
+import { useCurrentUser } from "@/lib/auth/current-user";
 import { plansById } from "@/lib/settings/plans";
 import { useBilling, useProfile } from "@/lib/settings/store";
 
@@ -33,18 +36,31 @@ const pageNames: Record<string, string> = {
 };
 
 type TopbarProps = {
+  /** Desktop: sidebar is expanded. Mobile: drawer is open. */
+  menuExpanded?: boolean;
   onMenuClick?: () => void;
 };
 
-export default function Topbar({ onMenuClick }: TopbarProps) {
+export default function Topbar({ menuExpanded = false, onMenuClick }: TopbarProps) {
   const pathname = usePathname();
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const user = useCurrentUser();
   const profile = useProfile();
+  const [signingOut, setSigningOut] = useState(false);
   const billing = useBilling();
   const planLabel = `${plansById[billing.planId].name} ${billing.status === "trialing" ? "trial" : "plan"}`;
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const signOut = async () => {
+    setSigningOut(true);
+    // Leave even if the request fails: the server clears the cookie whenever it can be reached.
+    await authClient.logout().catch(() => undefined);
+    router.replace("/login");
+    router.refresh();
+  };
 
   const segments = pathname.split("/").filter(Boolean);
   const currentPage = pageNames[segments[0] ?? ""] ?? "Dashboard";
@@ -83,17 +99,25 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-18 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+    // Spans the full width above the sidebar, so collapsing it never shifts the navbar.
+    <header className="sticky top-0 z-30 flex h-18 items-center gap-3 border-b border-border bg-background/80 pl-2.5 pr-4 backdrop-blur-xl sm:pl-4.5 sm:pr-6 lg:pr-8">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:w-65">
         <button
           type="button"
           onClick={onMenuClick}
-          aria-label="Open navigation"
-          className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"
+          aria-label="Toggle navigation"
+          aria-controls="app-sidebar"
+          aria-expanded={menuExpanded}
+          title={menuExpanded ? "Collapse sidebar" : "Expand sidebar"}
+          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           <Menu size={20} />
         </button>
 
+        <Logo href="/dashboard" className="max-sm:[&>span]:hidden" />
+      </div>
+
+      <div className="flex min-w-0 flex-1 items-center">
         <span className="sr-only">{currentPage}</span>
 
         <label className="flex h-10 w-full max-w-md items-center gap-2 rounded-xl border border-border bg-card px-3 transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
@@ -133,10 +157,10 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
             aria-expanded={menuOpen}
             className="flex items-center gap-2.5 rounded-xl p-1 text-left transition hover:bg-muted sm:pr-2"
           >
-            <UserAvatar name={profile.name} email={profile.email} color={profile.avatarColor} />
+            <UserAvatar name={user.name} email={user.email} color={profile.avatarColor} />
             <span className="hidden sm:block">
               <span className="block max-w-32 truncate text-sm font-semibold leading-tight">
-                {profile.name}
+                {user.name}
               </span>
               <span className="block text-[11px] text-muted-foreground">
                 {planLabel}
@@ -157,8 +181,8 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
               className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-border bg-card p-1.5 shadow-xl shadow-black/10 animate-fade-in"
             >
               <div className="border-b border-border px-3 pb-2.5 pt-1.5">
-                <p className="truncate text-sm font-semibold">{profile.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{profile.email}</p>
+                <p className="truncate text-sm font-semibold">{user.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
               </div>
               <div className="flex items-center justify-between px-3 py-2.5 sm:hidden">
                 <span className="text-sm text-muted-foreground">Dark mode</span>
@@ -180,14 +204,16 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                   {item.label}
                 </Link>
               ))}
-              <Link
+              <button
+                type="button"
                 role="menuitem"
-                href="/login"
-                className="mt-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-danger hover:bg-danger-soft"
+                onClick={signOut}
+                disabled={signingOut}
+                className="mt-1 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-danger hover:bg-danger-soft disabled:opacity-60"
               >
                 <LogOut size={15} />
-                Sign out
-              </Link>
+                {signingOut ? "Signing out…" : "Sign out"}
+              </button>
             </div>
           )}
         </div>

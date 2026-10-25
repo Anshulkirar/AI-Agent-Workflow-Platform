@@ -10,11 +10,16 @@ COPY . .
 RUN turbo prune @agentflow/web --docker
 
 FROM base AS builder
-ENV NEXT_TELEMETRY_DISABLED=1
+# next.config.ts reads this at build time for the /api rewrite (rewrites are baked into the build).
+ARG API_URL=http://api:4000
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    API_URL=${API_URL}
 COPY --from=pruner /repo/out/json/ .
 COPY --from=pruner /repo/out/package-lock.json ./package-lock.json
 RUN npm ci
 COPY --from=pruner /repo/out/full/ .
+# `turbo prune` only copies workspaces; every package's tsconfig extends this root file.
+COPY tsconfig.base.json ./
 RUN npx turbo run build --filter=@agentflow/web
 
 FROM node:${NODE_VERSION} AS runner
