@@ -18,8 +18,10 @@ export type AppDeps = {
 export function buildApp({ config, db }: AppDeps): FastifyInstance {
   const app = Fastify({
     logger: { level: config.LOG_LEVEL },
-    // Only the gateway can reach this service, so its X-Forwarded-For header carries the real client IP.
+    // Only the gateway can reach this service, so its X-Forwarded-For header carries the real client IP
+    // and its x-request-id becomes our log reqId (one id per request across both services' logs).
     trustProxy: true,
+    requestIdHeader: "x-request-id",
     // Auth payloads are tiny; refuse anything bigger before parsing it.
     bodyLimit: 16 * 1024,
   });

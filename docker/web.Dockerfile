@@ -10,10 +10,7 @@ COPY . .
 RUN turbo prune @agentflow/web --docker
 
 FROM base AS builder
-# next.config.ts reads this at build time for the /api rewrite (rewrites are baked into the build).
-ARG API_URL=http://api:4000
-ENV NEXT_TELEMETRY_DISABLED=1 \
-    API_URL=${API_URL}
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=pruner /repo/out/json/ .
 COPY --from=pruner /repo/out/package-lock.json ./package-lock.json
 RUN npm ci

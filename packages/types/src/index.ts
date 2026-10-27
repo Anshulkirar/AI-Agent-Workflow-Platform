@@ -14,7 +14,8 @@ export type ErrorCode =
   | "UNSUPPORTED_MEDIA_TYPE"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR"
-  | "SERVICE_UNAVAILABLE";
+  | "SERVICE_UNAVAILABLE"
+  | "GATEWAY_TIMEOUT";
 
 export type FieldError = { field: string; message: string };
 

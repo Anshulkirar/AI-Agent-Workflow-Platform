@@ -1,6 +1,6 @@
 import { SESSION_COOKIE_NAME, type SessionVerification } from "@agentflow/types";
 import type { FastifyInstance, FastifyRequest, preHandlerAsyncHookHandler } from "fastify";
-import { AppError } from "../errors.js";
+import { AppError, serviceUnavailable } from "../errors.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -33,24 +33,24 @@ export function registerRequireSession(app: FastifyInstance, authServiceUrl: str
     try {
       response = await fetch(verifyUrl, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-request-id": request.id },
         body: JSON.stringify({ token }),
         signal: AbortSignal.timeout(3_000),
       });
     } catch (error) {
       request.log.error(error, "auth service unreachable");
-      throw new AppError(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable.");
+      throw serviceUnavailable();
     }
 
     if (response.status === 401 || response.status === 400) throw unauthenticated();
-    if (!response.ok) throw new AppError(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable.");
+    if (!response.ok) throw serviceUnavailable();
 
     request.identity = (await response.json()) as SessionVerification;
   });
 }
 
 /** For proxies to downstream services: forward the verified identity as headers. */
-export function withIdentityHeaders(request: FastifyRequest, headers: Record<string, unknown>) {
+export function withIdentityHeaders<T extends object>(request: Pick<FastifyRequest, "identity">, headers: T) {
   if (!request.identity) return headers;
   return { ...headers, "x-user-id": request.identity.userId, "x-session-id": request.identity.sessionId };
 }

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { SESSION_COOKIE_NAME, type MeResponse, type PublicUser } from "@agentflow/types";
 
@@ -13,8 +13,13 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
 
+  // Pass the visitor's address on, or the gateway would rate-limit every page render as this server.
+  const forwardedFor = (await headers()).get("x-forwarded-for");
   const response = await fetch(`${API_URL}/v1/auth/me`, {
-    headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${token}`,
+      ...(forwardedFor && { "x-forwarded-for": forwardedFor }),
+    },
     cache: "no-store",
   });
   if (response.status === 401) return null;

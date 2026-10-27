@@ -85,16 +85,17 @@ services:
       args:
         APP: api
     restart: unless-stopped
+    # Not the shared *app-env: the gateway owns no data, so it gets no database URL or LLM keys.
     environment:
-      <<: *app-env
+      NODE_ENV: production
       PORT: 4000
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
       AUTH_SERVICE_URL: http://auth:4001
       WEB_ORIGINS: http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
     ports:
       - "${API_PORT:-4000}:4000"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
       auth:
