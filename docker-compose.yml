@@ -17,6 +17,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-agentflow}
       # Read by docker/postgres/init/10-auth.sql on first start.
       AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD is required}
+      WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:?WORKFLOW_DB_PASSWORD is required}
+      AGENT_DB_PASSWORD: ${AGENT_DB_PASSWORD:?AGENT_DB_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -59,6 +61,34 @@ services:
       postgres:
         condition: service_healthy
 
+  workflow-migrate:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: workflow
+    command: ["node", "dist/migrate.js", "up"]
+    restart: "no"
+    environment:
+      WORKFLOW_DATABASE_URL: postgres://workflow_service:${WORKFLOW_DB_PASSWORD:?WORKFLOW_DB_PASSWORD is required}@postgres:5432/agentflow_workflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  agent-migrate:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: agent
+    command: ["node", "dist/migrate.js", "up"]
+    restart: "no"
+    environment:
+      AGENT_DATABASE_URL: postgres://agent_service:${AGENT_DB_PASSWORD:?AGENT_DB_PASSWORD is required}@postgres:5432/agentflow_agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Sole owner of users and sessions. No published port: only the gateway can reach it.
   auth:
     build: *auth-build
@@ -78,6 +108,48 @@ services:
       timeout: 5s
       retries: 5
 
+  workflow:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: workflow
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4002
+      WORKFLOW_DATABASE_URL: postgres://workflow_service:${WORKFLOW_DB_PASSWORD:?WORKFLOW_DB_PASSWORD is required}@postgres:5432/agentflow_workflow
+    depends_on:
+      workflow-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  agent:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: agent
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4003
+      AGENT_DATABASE_URL: postgres://agent_service:${AGENT_DB_PASSWORD:?AGENT_DB_PASSWORD is required}@postgres:5432/agentflow_agent
+    depends_on:
+      agent-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4003/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -91,6 +163,8 @@ services:
       PORT: 4000
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
       AUTH_SERVICE_URL: http://auth:4001
+      WORKFLOW_SERVICE_URL: http://workflow:4002
+      AGENT_SERVICE_URL: http://agent:4003
       WEB_ORIGINS: http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
     ports:
@@ -99,6 +173,10 @@ services:
       redis:
         condition: service_healthy
       auth:
+        condition: service_healthy
+      workflow:
+        condition: service_healthy
+      agent:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

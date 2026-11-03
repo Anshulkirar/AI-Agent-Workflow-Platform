@@ -22,7 +22,26 @@ export type ServiceRoute = {
 
 export function serviceRoutes(config: Config): ServiceRoute[] {
   return [
-    { name: "auth", prefix: "/v1/auth", upstream: config.AUTH_SERVICE_URL, rewritePrefix: "/auth", access: "public" },
-    // { name: "agents", prefix: "/v1/agents", upstream: config.AGENTS_SERVICE_URL, rewritePrefix: "/agents", access: "session" },
+    {
+      name: "auth",
+      prefix: "/v1/auth",
+      upstream: config.AUTH_SERVICE_URL,
+      rewritePrefix: "/auth",
+      access: "public",
+    },
+    {
+      name: "workflow",
+      prefix: "/v1/workflows",
+      upstream: config.WORKFLOW_SERVICE_URL,
+      rewritePrefix: "/workflows",
+      access: "session",
+    },
+    {
+      name: "agent",
+      prefix: "/v1/agents",
+      upstream: config.AGENT_SERVICE_URL,
+      rewritePrefix: "/agents",
+      access: "session",
+    },
   ];
 }
