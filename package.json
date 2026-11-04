@@ -13,7 +13,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write apps/agent apps/api/src apps/workflow/src packages/types/src",
+    "format": "prettier --write apps/agent apps/api/src apps/workflow/src apps/execution apps/tools apps/worker/src packages/types/src",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "clean": "turbo run clean",

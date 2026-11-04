@@ -9,16 +9,25 @@ import { withIdentityHeaders } from "./require-session.js";
  * reachable, which is what keeps a service's `/internal/*` routes private. Bodies, status codes and
  * Set-Cookie headers pass through unchanged.
  */
-export function registerServiceProxy(app: FastifyInstance, service: ServiceRoute, timeoutMs: number) {
+export function registerServiceProxy(
+  app: FastifyInstance,
+  service: ServiceRoute,
+  timeoutMs: number,
+) {
   // Own scope, so the session guard applies to this service's routes only.
   app.register(async (scope) => {
-    if (service.access === "session") scope.addHook("preHandler", scope.requireSession);
+    if (service.access === "session")
+      scope.addHook("preHandler", scope.requireSession);
 
     await scope.register(proxy, {
       upstream: service.upstream,
       prefix: service.prefix,
       rewritePrefix: service.rewritePrefix,
-      undici: { connectTimeout: 3_000, headersTimeout: timeoutMs, bodyTimeout: timeoutMs },
+      undici: {
+        connectTimeout: 3_000,
+        headersTimeout: timeoutMs,
+        bodyTimeout: timeoutMs,
+      },
       replyOptions: {
         rewriteRequestHeaders: (request, headers) => {
           const forwarded = {
@@ -39,11 +48,18 @@ export function registerServiceProxy(app: FastifyInstance, service: ServiceRoute
         // The service could not be reached or was too slow. Its own error responses are not
         // errors here — they pass through unchanged.
         onError: (reply, { error }) => {
-          reply.log.error({ err: error, service: service.name }, "upstream request failed");
+          reply.log.error(
+            { err: error, service: service.name },
+            "upstream request failed",
+          );
           const timedOut = "statusCode" in error && error.statusCode === 504;
           reply.send(
             timedOut
-              ? new AppError(504, "GATEWAY_TIMEOUT", "The service took too long to respond.")
+              ? new AppError(
+                  504,
+                  "GATEWAY_TIMEOUT",
+                  "The service took too long to respond.",
+                )
               : serviceUnavailable(),
           );
         },

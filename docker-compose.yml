@@ -19,6 +19,8 @@ services:
       AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD is required}
       WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:?WORKFLOW_DB_PASSWORD is required}
       AGENT_DB_PASSWORD: ${AGENT_DB_PASSWORD:?AGENT_DB_PASSWORD is required}
+      EXECUTION_DB_PASSWORD: ${EXECUTION_DB_PASSWORD:?EXECUTION_DB_PASSWORD is required}
+      TOOLS_DB_PASSWORD: ${TOOLS_DB_PASSWORD:?TOOLS_DB_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -89,6 +91,34 @@ services:
       postgres:
         condition: service_healthy
 
+  execution-migrate:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: execution
+    command: ["node", "dist/migrate.js", "up"]
+    restart: "no"
+    environment:
+      EXECUTION_DATABASE_URL: postgres://execution_service:${EXECUTION_DB_PASSWORD:?EXECUTION_DB_PASSWORD is required}@postgres:5432/agentflow_execution
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  tools-migrate:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: tools
+    command: ["node", "dist/migrate.js", "up"]
+    restart: "no"
+    environment:
+      TOOLS_DATABASE_URL: postgres://tools_service:${TOOLS_DB_PASSWORD:?TOOLS_DB_PASSWORD is required}@postgres:5432/agentflow_tools
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Sole owner of users and sessions. No published port: only the gateway can reach it.
   auth:
     build: *auth-build
@@ -150,6 +180,61 @@ services:
       timeout: 5s
       retries: 5
 
+  execution:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: execution
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4004
+      EXECUTION_DATABASE_URL: postgres://execution_service:${EXECUTION_DB_PASSWORD:?EXECUTION_DB_PASSWORD is required}@postgres:5432/agentflow_execution
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      AGENT_SERVICE_URL: http://agent:4003
+      WORKFLOW_SERVICE_URL: http://workflow:4002
+    depends_on:
+      execution-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      agent:
+        condition: service_healthy
+      workflow:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4004/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tools:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: tools
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4005
+      TOOLS_DATABASE_URL: postgres://tools_service:${TOOLS_DB_PASSWORD:?TOOLS_DB_PASSWORD is required}@postgres:5432/agentflow_tools
+      TOOL_CREDENTIALS_KEY: ${TOOL_CREDENTIALS_KEY:?TOOL_CREDENTIALS_KEY is required}
+      AGENT_SERVICE_URL: http://agent:4003
+    depends_on:
+      tools-migrate:
+        condition: service_completed_successfully
+      agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4005/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -165,6 +250,8 @@ services:
       AUTH_SERVICE_URL: http://auth:4001
       WORKFLOW_SERVICE_URL: http://workflow:4002
       AGENT_SERVICE_URL: http://agent:4003
+      EXECUTION_SERVICE_URL: http://execution:4004
+      TOOLS_SERVICE_URL: http://tools:4005
       WEB_ORIGINS: http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
     ports:
@@ -177,6 +264,10 @@ services:
       workflow:
         condition: service_healthy
       agent:
+        condition: service_healthy
+      execution:
+        condition: service_healthy
+      tools:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -192,8 +283,12 @@ services:
         APP: worker
     restart: unless-stopped
     environment:
-      <<: *app-env
+      NODE_ENV: production
+      EXECUTION_DATABASE_URL: postgres://execution_service:${EXECUTION_DB_PASSWORD:?EXECUTION_DB_PASSWORD is required}@postgres:5432/agentflow_execution
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
     depends_on:
+      execution-migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

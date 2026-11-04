@@ -23,7 +23,11 @@ export type AppDeps = {
  * The public entry point. It owns no data: it checks where requests come from, limits how often
  * they come, works out who is calling, and forwards each path prefix to the service that owns it.
  */
-export function buildApp({ config, redis, services = serviceRoutes(config) }: AppDeps): FastifyInstance {
+export function buildApp({
+  config,
+  redis,
+  services = serviceRoutes(config),
+}: AppDeps): FastifyInstance {
   const app = Fastify({
     logger: { level: config.LOG_LEVEL },
     trustProxy: config.TRUST_PROXY,
@@ -45,7 +49,8 @@ export function buildApp({ config, redis, services = serviceRoutes(config) }: Ap
   registerRateLimit(app, config, redis);
 
   app.register(async (scope) => registerHealthRoutes(scope, services));
-  for (const service of services) registerServiceProxy(app, service, config.UPSTREAM_TIMEOUT_MS);
+  for (const service of services)
+    registerServiceProxy(app, service, config.UPSTREAM_TIMEOUT_MS);
 
   return app;
 }

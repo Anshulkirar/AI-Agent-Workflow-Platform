@@ -1,5 +1,6 @@
 import type { Pool } from "@agentflow/db";
 import Fastify, { type FastifyInstance } from "fastify";
+import { z } from "zod";
 import type { Config } from "./config.js";
 import { registerErrorHandling } from "./errors.js";
 import { WorkflowsRepository } from "./modules/workflows/workflows.repository.js";
@@ -14,7 +15,17 @@ export function buildApp({ config, db }: AppDeps): FastifyInstance {
     bodyLimit: 256 * 1024,
   });
   registerErrorHandling(app);
-  workflowsRoutes(app, new WorkflowsRepository(db));
+  const repository = new WorkflowsRepository(db);
+  workflowsRoutes(app, repository);
+  app.get("/internal/workflows/:id/owner", async (request, reply) => {
+    const { id } = z.object({ id: z.uuid() }).parse(request.params);
+    const owner = await repository.findOwner(id);
+    if (!owner)
+      return reply
+        .code(404)
+        .send({ error: { code: "NOT_FOUND", message: "Workflow not found." } });
+    return { userId: owner };
+  });
   app.get("/health", async (_request, reply) => {
     try {
       await db.query("SELECT 1");

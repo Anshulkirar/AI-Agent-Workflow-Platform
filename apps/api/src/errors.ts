@@ -24,7 +24,9 @@ const CLIENT_ERROR_CODES: Record<number, ErrorCode> = {
   429: "RATE_LIMITED",
 };
 
-const body = (code: ErrorCode, message: string): ApiErrorBody => ({ error: { code, message } });
+const body = (code: ErrorCode, message: string): ApiErrorBody => ({
+  error: { code, message },
+});
 
 /**
  * Gateway-generated errors use the same envelope as the services behind it. Errors a service
@@ -38,14 +40,22 @@ export function registerErrorHandling(app: FastifyInstance) {
 
     const status = error.statusCode ?? 500;
     if (status < 500) {
-      return reply.code(status).send(body(CLIENT_ERROR_CODES[status] ?? "BAD_REQUEST", error.message));
+      return reply
+        .code(status)
+        .send(body(CLIENT_ERROR_CODES[status] ?? "BAD_REQUEST", error.message));
     }
 
     request.log.error(error);
-    return reply.code(500).send(body("INTERNAL_ERROR", "Something went wrong."));
+    return reply
+      .code(500)
+      .send(body("INTERNAL_ERROR", "Something went wrong."));
   });
 
   app.setNotFoundHandler((request, reply) =>
-    reply.code(404).send(body("NOT_FOUND", `Route ${request.method} ${request.url} not found.`)),
+    reply
+      .code(404)
+      .send(
+        body("NOT_FOUND", `Route ${request.method} ${request.url} not found.`),
+      ),
   );
 }

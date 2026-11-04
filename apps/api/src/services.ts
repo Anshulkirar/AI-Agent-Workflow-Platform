@@ -43,5 +43,19 @@ export function serviceRoutes(config: Config): ServiceRoute[] {
       rewritePrefix: "/agents",
       access: "session",
     },
+    {
+      name: "execution",
+      prefix: "/v1/runs",
+      upstream: config.EXECUTION_SERVICE_URL,
+      rewritePrefix: "/runs",
+      access: "session",
+    },
+    {
+      name: "tools",
+      prefix: "/v1/tools",
+      upstream: config.TOOLS_SERVICE_URL,
+      rewritePrefix: "/tools",
+      access: "session",
+    },
   ];
 }

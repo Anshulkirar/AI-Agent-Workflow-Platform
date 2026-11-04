@@ -6,11 +6,18 @@ const config = loadConfig();
 
 // Fail fast instead of queueing: with `skipOnError` the rate limiter then lets requests through.
 const redis = config.REDIS_URL
-  ? new Redis(config.REDIS_URL, { connectTimeout: 500, maxRetriesPerRequest: 1, enableOfflineQueue: false })
+  ? new Redis(config.REDIS_URL, {
+      connectTimeout: 500,
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+    })
   : undefined;
 const app = buildApp({ config, redis });
-redis?.on("error", (error) => app.log.warn({ err: error }, "redis unavailable; rate limits not enforced"));
-if (!redis) app.log.warn("REDIS_URL not set; rate limits are counted per process");
+redis?.on("error", (error) =>
+  app.log.warn({ err: error }, "redis unavailable; rate limits not enforced"),
+);
+if (!redis)
+  app.log.warn("REDIS_URL not set; rate limits are counted per process");
 
 try {
   await app.listen({ host: config.HOST, port: config.PORT });

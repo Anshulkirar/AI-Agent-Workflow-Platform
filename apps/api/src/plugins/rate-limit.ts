@@ -9,7 +9,11 @@ import { AppError } from "../errors.js";
  * (the auth service counts login attempts per IP *and* email); this layer stops one client from
  * hammering the whole platform. Routes opt out with `config: { rateLimit: false }`.
  */
-export function registerRateLimit(app: FastifyInstance, config: Config, redis?: Redis) {
+export function registerRateLimit(
+  app: FastifyInstance,
+  config: Config,
+  redis?: Redis,
+) {
   app.register(rateLimit, {
     max: config.RATE_LIMIT_MAX,
     timeWindow: config.RATE_LIMIT_WINDOW_MS,
@@ -18,6 +22,10 @@ export function registerRateLimit(app: FastifyInstance, config: Config, redis?: 
     // If Redis is down, let traffic through: a counter outage must not become a platform outage.
     skipOnError: true,
     errorResponseBuilder: (_request, context) =>
-      new AppError(429, "RATE_LIMITED", `Too many requests. Try again in ${context.after}.`),
+      new AppError(
+        429,
+        "RATE_LIMITED",
+        `Too many requests. Try again in ${context.after}.`,
+      ),
   });
 }
