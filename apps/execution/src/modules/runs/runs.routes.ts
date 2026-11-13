@@ -22,6 +22,7 @@ export function runsRoutes(
   config: Config,
 ) {
   app.addHook("preHandler", async (request) => {
+    if (request.url === "/health" || request.url.startsWith("/internal/")) return;
     const value = request.headers["x-user-id"];
     const userId = Array.isArray(value) ? value[0] : value;
     const parsed = userIdSchema.safeParse(userId);
@@ -56,6 +57,13 @@ export function runsRoutes(
   app.get("/runs", async (request) =>
     repository.list(String(request.headers["x-user-id"])),
   );
+
+  app.get("/runs/:id/nodes", async (request) => {
+    const { id } = ids.parse(request.params);
+    const userId = String(request.headers["x-user-id"]);
+    if (!(await repository.find(userId, id))) throw await inaccessibleRun(repository, id);
+    return repository.nodeRuns(id);
+  });
 
   app.get("/runs/:id", async (request) => {
     const { id } = ids.parse(request.params);

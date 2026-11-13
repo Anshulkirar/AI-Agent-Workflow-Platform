@@ -21,6 +21,7 @@ services:
       AGENT_DB_PASSWORD: ${AGENT_DB_PASSWORD:?AGENT_DB_PASSWORD is required}
       EXECUTION_DB_PASSWORD: ${EXECUTION_DB_PASSWORD:?EXECUTION_DB_PASSWORD is required}
       TOOLS_DB_PASSWORD: ${TOOLS_DB_PASSWORD:?TOOLS_DB_PASSWORD is required}
+      KNOWLEDGE_DB_PASSWORD: ${KNOWLEDGE_DB_PASSWORD:?KNOWLEDGE_DB_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -115,6 +116,20 @@ services:
     restart: "no"
     environment:
       TOOLS_DATABASE_URL: postgres://tools_service:${TOOLS_DB_PASSWORD:?TOOLS_DB_PASSWORD is required}@postgres:5432/agentflow_tools
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  knowledge-migrate:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: knowledge
+    command: ["node", "dist/migrate.js", "up"]
+    restart: "no"
+    environment:
+      KNOWLEDGE_DATABASE_URL: postgres://knowledge_service:${KNOWLEDGE_DB_PASSWORD:?KNOWLEDGE_DB_PASSWORD is required}@postgres:5432/agentflow_knowledge
     depends_on:
       postgres:
         condition: service_healthy
@@ -235,6 +250,36 @@ services:
       timeout: 5s
       retries: 5
 
+  knowledge:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      args:
+        APP: knowledge
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4006
+      KNOWLEDGE_DATABASE_URL: postgres://knowledge_service:${KNOWLEDGE_DB_PASSWORD:?KNOWLEDGE_DB_PASSWORD is required}@postgres:5432/agentflow_knowledge
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      KNOWLEDGE_STORAGE_DIR: /data/knowledge
+      AGENT_SERVICE_URL: http://agent:4003
+    volumes:
+      - knowledge-data:/data/knowledge
+    depends_on:
+      knowledge-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4006/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -252,6 +297,7 @@ services:
       AGENT_SERVICE_URL: http://agent:4003
       EXECUTION_SERVICE_URL: http://execution:4004
       TOOLS_SERVICE_URL: http://tools:4005
+      KNOWLEDGE_SERVICE_URL: http://knowledge:4006
       WEB_ORIGINS: http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
     ports:
@@ -268,6 +314,8 @@ services:
       execution:
         condition: service_healthy
       tools:
+        condition: service_healthy
+      knowledge:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -286,8 +334,17 @@ services:
       NODE_ENV: production
       EXECUTION_DATABASE_URL: postgres://execution_service:${EXECUTION_DB_PASSWORD:?EXECUTION_DB_PASSWORD is required}@postgres:5432/agentflow_execution
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      KNOWLEDGE_DATABASE_URL: postgres://knowledge_service:${KNOWLEDGE_DB_PASSWORD:?KNOWLEDGE_DB_PASSWORD is required}@postgres:5432/agentflow_knowledge
+      WORKFLOW_SERVICE_URL: http://workflow:4002
+      AGENT_SERVICE_URL: http://agent:4003
+      EXECUTION_SERVICE_URL: http://execution:4004
+      TOOLS_SERVICE_URL: http://tools:4005
+    volumes:
+      - knowledge-data:/data/knowledge
     depends_on:
       execution-migrate:
+        condition: service_completed_successfully
+      knowledge-migrate:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
@@ -311,3 +368,4 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  knowledge-data:

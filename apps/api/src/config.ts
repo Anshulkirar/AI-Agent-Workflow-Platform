@@ -16,6 +16,7 @@ const envSchema = z.object({
   AGENT_SERVICE_URL: z.url().default("http://127.0.0.1:4003"),
   EXECUTION_SERVICE_URL: z.url().default("http://127.0.0.1:4004"),
   TOOLS_SERVICE_URL: z.url().default("http://127.0.0.1:4005"),
+  KNOWLEDGE_SERVICE_URL: z.url().default("http://127.0.0.1:4006"),
   // How long a service may take to send response headers (and then the body) before we give up.
   UPSTREAM_TIMEOUT_MS: z.coerce.number().int().min(100).default(10_000),
 

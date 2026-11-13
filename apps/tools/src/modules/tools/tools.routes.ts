@@ -19,6 +19,7 @@ export function toolsRoutes(
   config: Config,
 ) {
   app.addHook("preHandler", async (request) => {
+    if (request.url === "/health" || request.url.startsWith("/internal/")) return;
     const value = request.headers["x-user-id"];
     const user = Array.isArray(value) ? value[0] : value;
     const parsed = userIdSchema.safeParse(user);

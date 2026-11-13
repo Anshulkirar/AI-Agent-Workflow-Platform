@@ -39,6 +39,7 @@ CREATE TABLE execution_logs (
 );
 CREATE INDEX execution_logs_run_idx ON execution_logs (run_id, id);
 
+
 -- Down Migration
 DROP TABLE execution_logs;
 DROP TABLE execution_runs;

@@ -17,6 +17,7 @@ export function workflowsRoutes(
   repository: WorkflowsRepository,
 ) {
   app.addHook("preHandler", async (request) => {
+    if (request.url === "/health" || request.url.startsWith("/internal/")) return;
     const raw = request.headers["x-user-id"];
     const userId = Array.isArray(raw) ? raw[0] : raw;
     const parsed = userIdSchema.safeParse(userId);
@@ -136,4 +137,13 @@ export function workflowsRoutes(
       return reply.send(await repository.find(userId, id));
     },
   );
+
+  app.get("/internal/workflows/:id", async (request, reply) => {
+    const { id } = z.object({ id: idSchema }).parse(request.params);
+    const workflow = await repository.findOwner(id);
+    if (!workflow) return reply.code(404).send({ error: { code: "NOT_FOUND", message: "Workflow not found." } });
+    const row = await repository.find(String(workflow), id);
+    if (!row) return reply.code(404).send({ error: { code: "NOT_FOUND", message: "Workflow not found." } });
+    return { id, userId: workflow, name: row.name, graph: row.graph, settings: row.settings };
+  });
 }

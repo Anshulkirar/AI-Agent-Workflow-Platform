@@ -57,6 +57,24 @@ export function toRun(row: RunRow) {
 export class RunsRepository {
   constructor(private db: Pool) {}
 
+  async nodeRuns(runId: string) {
+    const result = await this.db.query(
+      "SELECT * FROM workflow_node_runs WHERE run_id=$1 ORDER BY created_at, node_id",
+      [runId],
+    );
+    return result.rows.map((row) => ({
+      ...row,
+      input: row.input,
+      output: row.output,
+      durationMs: row.duration_ms,
+      attempt: row.attempt,
+      startedAt: row.started_at?.toISOString() ?? null,
+      completedAt: row.completed_at?.toISOString() ?? null,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+    }));
+  }
+
   async create(
     userId: string,
     input: {

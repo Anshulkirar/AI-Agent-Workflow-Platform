@@ -86,8 +86,7 @@ export const workflowSchema = z
     });
   });
 
-export const agentInputSchema = z
-  .object({
+const agentInputShape = z.object({
     name: z.string().trim().min(1).max(200),
     description: z.string().trim().max(2000).default(""),
     icon: z
@@ -124,7 +123,8 @@ export const agentInputSchema = z
     knowledge: z.array(referenceSchema).max(1000).default([]),
     settings: settingsSchema,
     workflow: workflowSchema.optional(),
-  })
+  });
+export const agentInputSchema = agentInputShape
   .superRefine((agent, ctx) => {
     if (agent.tools.some((tool, index) => agent.tools.indexOf(tool) !== index))
       ctx.addIssue({
@@ -143,7 +143,28 @@ export const agentInputSchema = z
         message: "Knowledge references must be unique.",
       });
   });
-export const agentPatchSchema = agentInputSchema.partial();
+export const agentPatchSchema = agentInputShape.partial().superRefine((agent, ctx) => {
+  if (
+    agent.tools &&
+    agent.tools.some((tool, index) => agent.tools?.indexOf(tool) !== index)
+  )
+    ctx.addIssue({
+      code: "custom",
+      path: ["tools"],
+      message: "Tool references must be unique.",
+    });
+  if (
+    agent.knowledge &&
+    agent.knowledge.some(
+      (source, index) => agent.knowledge?.indexOf(source) !== index,
+    )
+  )
+    ctx.addIssue({
+      code: "custom",
+      path: ["knowledge"],
+      message: "Knowledge references must be unique.",
+    });
+});
 export const createVersionSchema = z.object({
   instructions: z.string().max(100000),
   tools: z.array(referenceSchema).max(100),

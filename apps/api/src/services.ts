@@ -57,5 +57,12 @@ export function serviceRoutes(config: Config): ServiceRoute[] {
       rewritePrefix: "/tools",
       access: "session",
     },
+    {
+      name: "knowledge",
+      prefix: "/v1/knowledge",
+      upstream: config.KNOWLEDGE_SERVICE_URL,
+      rewritePrefix: "/knowledge",
+      access: "session",
+    },
   ];
 }
